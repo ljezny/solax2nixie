@@ -71,12 +71,37 @@ async function showSocNixie(access_token, clockId, soc) {
         host: 'api.daliborfarny.com',
         port: 443,
         method: 'POST',
-        path: '/v1/devices/' + clockId + '/showcustomdata',
+        path: '/v1/devices/' + clockId + '/customdata',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         }
     };
-    return await httpRequest(params, 'client_id=3rdparty&access_token=' + access_token + '&client_secret=ws7TQHXp5W6444t4&arg=');
+    return await httpRequest(params, 'client_id=3rdparty&access_token=' + access_token + '&client_secret=ws7TQHXp5W6444t4&arg=' + text);
+}
+
+async function showSocColorNixie(access_token, clockId, soc) {
+    //nixie can show data in format _ - not shown, 0-9 for numbers, .:; for colon
+    if (soc > 99) {
+        soc = 99;
+    }
+
+    var color = "255"; 
+    if(soc > 80) {
+        color = "65280";
+    } else if(soc > 30) {
+        color = "21247";
+    }
+
+    var params = {
+        host: 'api.daliborfarny.com',
+        port: 443,
+        method: 'POST',
+        path: '/v1/devices/' + clockId + '/underlightsolidcolor',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        }
+    };
+    return await httpRequest(params, 'client_id=3rdparty&access_token=' + access_token + '&client_secret=ws7TQHXp5W6444t4&arg=' + color);
 }
 
 async function showClocksNixie(access_token, clockId) {
@@ -124,20 +149,15 @@ while (true) {
     }
 
     if (Date.now() - lastSolaxMS > 5 * 60 * 1000) { // 5 minutes
-        //solaxResponse = await solaxData(config);
-        solaxResponse = {
-            success: true,
-            result: {
-                soc: 50
-            }
-        };
+        solaxResponse = await solaxData(config);
         lastSolaxMS = Date.now();
     }
     if (solaxResponse.success) {
+        await showSocColorNixie(nixieTokenResponse.data.access_token, nixieListResponse.data[0].id, solaxResponse.result.soc);
         await showSocNixie(nixieTokenResponse.data.access_token, nixieListResponse.data[0].id, solaxResponse.result.soc);
         await new Promise(resolve => setTimeout(resolve, 5 * 1000));
         await showClocksNixie(nixieTokenResponse.data.access_token, nixieListResponse.data[0].id, solaxResponse.result.soc);
     }
 
-    await new Promise(resolve => setTimeout(resolve, 60 * 1000));
+    await new Promise(resolve => setTimeout(resolve, 30 * 1000));
 }
