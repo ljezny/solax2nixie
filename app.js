@@ -3,7 +3,7 @@ import * as fs from 'fs';
 
 function httpRequest(params, postData) {
     return new Promise(function (resolve, reject) {
-        var req = https.request(params, function (res) {            
+        var req = https.request(params, function (res) {
             if (res.statusCode < 200 || res.statusCode >= 300) {
                 console.log(res);
                 return reject(new Error('statusCode=' + res.statusCode));
@@ -85,10 +85,10 @@ async function showSocColorNixie(access_token, clockId, soc) {
         soc = 99;
     }
 
-    var color = "255"; 
-    if(soc > 80) {
+    var color = "255";
+    if (soc > 80) {
         color = "65280";
-    } else if(soc > 30) {
+    } else if (soc > 30) {
         color = "21247";
     }
 
@@ -142,22 +142,26 @@ console.log(config);
 
 
 while (true) {
-    if (Date.now() - lastNixieTokenMS > 60 * 60 * 1000) {
-        nixieTokenResponse = await loginNixie(config);
-        nixieListResponse = await listNixies(nixieTokenResponse.data.access_token);
-        lastNixieTokenMS = Date.now();
-    }
+    try {
+        if (Date.now() - lastNixieTokenMS > 60 * 60 * 1000) {
+            nixieTokenResponse = await loginNixie(config);
+            nixieListResponse = await listNixies(nixieTokenResponse.data.access_token);
+            lastNixieTokenMS = Date.now();
+        }
 
-    if (Date.now() - lastSolaxMS > 5 * 60 * 1000) { // 5 minutes
-        solaxResponse = await solaxData(config);
-        lastSolaxMS = Date.now();
+        if (Date.now() - lastSolaxMS > 5 * 60 * 1000) { // 5 minutes
+            solaxResponse = await solaxData(config);
+            lastSolaxMS = Date.now();
+        }
+        if (solaxResponse.success) {
+            await showSocColorNixie(nixieTokenResponse.data.access_token, nixieListResponse.data[0].id, solaxResponse.result.soc);
+            await showSocNixie(nixieTokenResponse.data.access_token, nixieListResponse.data[0].id, solaxResponse.result.soc);
+            await new Promise(resolve => setTimeout(resolve, 5 * 1000));
+            await showClocksNixie(nixieTokenResponse.data.access_token, nixieListResponse.data[0].id, solaxResponse.result.soc);
+        }
+    } catch (e) {
+        console.log(e);
+        await new Promise(resolve => setTimeout(resolve, 60 * 60 * 1000));
     }
-    if (solaxResponse.success) {
-        await showSocColorNixie(nixieTokenResponse.data.access_token, nixieListResponse.data[0].id, solaxResponse.result.soc);
-        await showSocNixie(nixieTokenResponse.data.access_token, nixieListResponse.data[0].id, solaxResponse.result.soc);
-        await new Promise(resolve => setTimeout(resolve, 5 * 1000));
-        await showClocksNixie(nixieTokenResponse.data.access_token, nixieListResponse.data[0].id, solaxResponse.result.soc);
-    }
-
     await new Promise(resolve => setTimeout(resolve, 30 * 1000));
 }
